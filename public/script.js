@@ -10,26 +10,57 @@ const player = document.getElementById("player")
 const readyBtn = document.getElementById("readyBtn")
 const playAgainBtn = document.getElementById("playAgainBtn")
 const reconnectBtn = document.getElementById("reconnectBtn")
+const badBtn = document.getElementById("badBtn")
+const doubleBtn = document.getElementById("doubleBtn")
 const gameZone = document.querySelector(".game-zone");
 
-const moveAndResizeButton = () => {
-  const sizes = ["40px", "60px", "80px", "100px"];
-  const size = sizes[Math.floor(Math.random() * sizes.length)];
+const sizes = ["40px", "60px", "80px", "100px"];
 
-  clickBtn.style.width = size;
-  clickBtn.style.height = size;
-  clickBtn.style.fontSize = parseInt(size) / 3 + "px";
-clickBtn.style.lineHeight = size;
+function getRandomPosition(button) {
+  const zoneRect = gameZone.getBoundingClientRect()
+  const btnWidth = button.offsetWidth
+  const btnHeight = button.offsetHeight
+  const maxLeft = zoneRect.width - btnWidth
+  const maxTop = zoneRect.height - btnHeight
+  return {
+    left: Math.random() * maxLeft,
+    top: Math.random() * maxTop
+  }
+}
 
-  const zoneRect = gameZone.getBoundingClientRect();
-  const maxLeft = zoneRect.width - parseInt(size);
-  const maxTop = zoneRect.height - parseInt(size);
+function moveAndResizeButton(button) {
+  const size = sizes[Math.floor(Math.random() * sizes.length)]
 
-  const left = Math.random() * maxLeft;
-  const top = Math.random() * maxTop;
+  button.style.width = size
+  button.style.height = size
+  button.style.fontSize = (parseInt(size) / 3) + "px"
+  button.style.lineHeight = size
 
-  clickBtn.style.left = `${left}px`;
-  clickBtn.style.top = `${top}px`;
+  const pos = getRandomPosition(button)
+  button.style.left = `${pos.left}px`
+  button.style.top = `${pos.top}px`
+}
+
+function hideExtraButtons() {
+  badBtn.classList.add("hidden")
+  doubleBtn.classList.add("hidden")
+}
+
+function resetButtonsAfterClick() {
+  clickBtn.classList.remove("hidden")
+  moveAndResizeButton(clickBtn)
+
+  hideExtraButtons()
+  
+  if (Math.random() < 0.4) { 
+    badBtn.classList.remove("hidden")
+    moveAndResizeButton(badBtn)
+  }
+
+  if (Math.random() < 0.3) {
+    doubleBtn.classList.remove("hidden")
+    moveAndResizeButton(doubleBtn)
+  }
 }
 
 clickBtn.addEventListener("click", () => {
@@ -37,7 +68,23 @@ clickBtn.addEventListener("click", () => {
   clickCount++
   clicks.textContent = "Cliques: " + clickCount
 
-  moveAndResizeButton()
+  resetButtonsAfterClick()
+})
+
+badBtn.addEventListener("click", () => {
+  ws?.send(JSON.stringify({ type: "badClick" }))
+  clickCount--
+  clicks.textContent = "Cliques: " + clickCount
+
+  resetButtonsAfterClick()
+})
+
+doubleBtn.addEventListener("click", () => {
+  ws?.send(JSON.stringify({ type: "doubleClick" }))
+  clickCount+=2
+  clicks.textContent = "Cliques: " + clickCount
+
+  resetButtonsAfterClick()
 })
 
 readyBtn.addEventListener("click", () => {
@@ -100,6 +147,8 @@ const connectWebSocket = () => {
         playAgainBtn.disabled = false
         playAgainBtn.classList.remove("hidden")
         clickBtn.classList.add("hidden")
+        badBtn.classList.add("hidden")
+        doubleBtn.classList.add("hidden")
         timer.textContent = ""
         clicks.textContent = "Você clicou " + data.points[playerIndex - 1] + " vezes."
 
@@ -120,14 +169,18 @@ const connectWebSocket = () => {
         gameStatus.textContent = "Preparar... " + data.number
         readyBtn.classList.add("hidden")
         clickBtn.classList.remove("hidden")
+        badBtn.classList.add("hidden")
+        doubleBtn.classList.add("hidden")
         clickBtn.disabled = true
 
-        moveAndResizeButton()
+        moveAndResizeButton(clickBtn)
         break
 
       case "opponent_disconnected":
         gameStatus.textContent = "Oponente desconectou. Aguardando novo oponente..."
         clickBtn.classList.add("hidden")
+        badBtn.classList.add("hidden")
+        doubleBtn.classList.add("hidden")
         break
 
       case "error":
@@ -142,6 +195,8 @@ const connectWebSocket = () => {
   ws.onclose = () => {
     reconnectBtn.classList.remove("hidden")
     clickBtn.classList.add("hidden")
+    badBtn.classList.add("hidden")
+    doubleBtn.classList.add("hidden")
     readyBtn.classList.add("hidden")
     playAgainBtn.classList.add("hidden")
   }

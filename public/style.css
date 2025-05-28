@@ -26,12 +26,26 @@
   overflow: hidden;
 }
 
-#clickBtn {
+#clickBtn, #badBtn, #doubleBtn {
   position: absolute;
-    display: flex;
+  font-size: 18px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  border: none;
-  white-space: nowrap;
+}
+
+#clickBtn {
+  background-color: #888;
+}
+
+#badBtn {
+  background-color: red;
+}
+
+#doubleBtn {
+  background-color: blue;
 }
