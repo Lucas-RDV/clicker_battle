@@ -2,19 +2,26 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>click battle</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>click battle</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
+  <div class="HUD">
     <h1>Click Battle!</h1>
     <p id="player"></p>
-  <p id="Status">Aguardando conexão...</p>
-  <p id="timer"></p>
-  <p id="clicks">Cliques: 0</p>
-  <button id="clickBtn">Clique!</button>
+    <p id="Status">Aguardando conexão...</p>
+    <p id="timer"></p>
+    <p id="clicks">Cliques: 0</p>
+    <button id="readyBtn">Estou Pronto!</button>
+    <button id="playAgainBtn" class="hidden">Jogar Novamente</button>
+    <button id="reconnectBtn" class="hidden">Conectar</button>
+  </div>
+  <div class="game-zone">
+    <button id="clickBtn" class="hidden">Clique!</button>
+  </div>
   <script src="script.js"></script>
 </body>
 

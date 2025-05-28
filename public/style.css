@@ -1,19 +1,37 @@
-body {
+.HUD {
   font-family: sans-serif;
   text-align: center;
   margin-top: 50px;
 }
 
-button {
+.HUD button {
   font-size: 24px;
   padding: 15px 30px;
   margin-top: 20px;
   cursor: pointer;
-}
-
-#timer,
-#clicks,
-#status {
   font-size: 20px;
   margin-top: 15px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.game-zone {
+  position: relative;
+  width: 100%;
+  height: 60vh;
+  border: 1px solid #ccc;
+  margin-top: 30px;
+  overflow: hidden;
+}
+
+#clickBtn {
+  position: absolute;
+    display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  white-space: nowrap;
 }
