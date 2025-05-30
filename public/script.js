@@ -12,6 +12,7 @@ const reconnectBtn = document.getElementById("reconnectBtn")
 const badBtn = document.getElementById("badBtn")
 const doubleBtn = document.getElementById("doubleBtn")
 const gameZone = document.querySelector(".game-zone")
+const opponentPoints = document.getElementById("opponent-points")
 
 const sizes = ["40px", "60px", "80px", "100px"]
 let totalGameTime = 30
@@ -107,7 +108,7 @@ clickBtn.addEventListener("click", () => {
   playSound("sounds/click.wav")
   ws?.send(JSON.stringify({ type: "click" }))
   clickCount++
-  clicks.textContent = "Cliques: " + clickCount
+  clicks.textContent = clickCount
 
   resetButtonsAfterClick()
 })
@@ -117,7 +118,7 @@ badBtn.addEventListener("click", () => {
   triggerEffect(badBtn, "effect-hit")
   ws?.send(JSON.stringify({ type: "badClick" }))
   clickCount--
-  clicks.textContent = "Cliques: " + clickCount
+  clicks.textContent = clickCount
 
   resetButtonsAfterClick()
 })
@@ -127,7 +128,7 @@ doubleBtn.addEventListener("click", () => {
   triggerEffect(doubleBtn, "effect-bonus")
   ws?.send(JSON.stringify({ type: "doubleClick" }))
   clickCount += 2
-  clicks.textContent = "Cliques: " + clickCount
+  clicks.textContent = clickCount
 
   resetButtonsAfterClick()
 })
@@ -177,7 +178,8 @@ const connectWebSocket = () => {
         totalGameTime = 30
         clickCount = 0
         clickBtn.disabled = false
-        clicks.textContent = "Cliques: 0"
+        clicks.textContent = "0"
+        opponentPoints.textContent = "0"
         gameStatus.textContent = "Clique o mais rápido que puder!"
         break
 
@@ -188,12 +190,16 @@ const connectWebSocket = () => {
         playAgainBtn.classList.add("hidden")
         readyBtn.classList.remove("hidden")
         clickCount = 0
-        clicks.textContent = ".............."
         timer.textContent = ""
         break
 
       case "timer":
         updateTimerBar(data.duration)
+        data.points.forEach((p,i) => {
+          if (i!= playerIndex-1) {
+            opponentPoints.textContent = p
+          }
+        })
         break
 
       case "end":
@@ -203,7 +209,12 @@ const connectWebSocket = () => {
         clickBtn.classList.add("hidden")
         badBtn.classList.add("hidden")
         doubleBtn.classList.add("hidden")
-        clicks.textContent = "Você clicou " + data.points[playerIndex - 1] + " vezes."
+        clicks.textContent = data.points[playerIndex - 1]
+         data.points.forEach((p,i) => {
+          if (i!= playerIndex-1) {
+            opponentPoints.textContent = p
+          }
+        })
 
         if (playerIndex == data.result && data.result !== "empate") {
           playSound("sounds/win.wav")

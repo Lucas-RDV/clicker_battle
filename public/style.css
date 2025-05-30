@@ -169,6 +169,8 @@ html, body {
   padding: 0;
 }
 
+
+
 .game-zone button:disabled {
   opacity: 0.4;
   filter: grayscale(100%);

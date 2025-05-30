@@ -48,7 +48,7 @@ const startGame = () => {
     duration--
     connections.forEach((c) => {
       if (c && c.readyState === WebSocket.OPEN) {
-        c.send(JSON.stringify({ type: "timer", duration }))
+        c.send(JSON.stringify({ type: "timer", duration, points }))
       }
     }
     );
