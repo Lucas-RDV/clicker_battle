@@ -6,23 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>click battle</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
-  <div class="HUD">
-    <h1>Click Battle!</h1>
-    <p id="player"></p>
-    <p id="Status">Aguardando conexão...</p>
-    <p id="timer"></p>
-    <p id="clicks">Cliques: 0</p>
-    <button id="readyBtn">Estou Pronto!</button>
-    <button id="playAgainBtn" class="hidden">Jogar Novamente</button>
-    <button id="reconnectBtn" class="hidden">Conectar</button>
-  </div>
-  <div class="game-zone">
-    <button id="clickBtn" class="hidden">Clique!</button>
-    <button id="badBtn" class="hidden">Bad</button>
-    <button id="doubleBtn" class="hidden">Double</button>
+  <div id="main-container">
+    <div class="HUD">
+      <h1>Click Battle!</h1>
+      <p id="player"></p>
+      <p id="Status">Aguardando conexão...</p>
+      <p id="clicks">Cliques: 0</p>
+      <div class="hud-buttons-container">
+        <button id="readyBtn">Estou Pronto!</button>
+        <button id="playAgainBtn" class="hidden">Jogar Novamente</button>
+        <button id="reconnectBtn" class="hidden">Conectar</button>
+      </div>
+      <div class="timer-bar-container">
+        <div class="timer-bar" id="progressBar"></div>
+      </div>
+    </div>
+    <div class="game-zone">
+      <button id="clickBtn" class="hidden"><i class="fas fa-hand-pointer"></i></button>
+      <button id="badBtn" class="hidden"><i class="fas fa-bomb"></i></button>
+      <button id="doubleBtn" class="hidden"><i class="fas fa-star"></i></button>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>

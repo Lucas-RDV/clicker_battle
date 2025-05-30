@@ -20,8 +20,9 @@ const httpServer = http.createServer((req, res) => {
 
 let connections = []
 let points = [0, 0]
-let duration = 10
+let duration = 30
 let interval = null
+let countdownInterval = null
 let ready = [false, false]
 let gameStarted = false
 let playAgain = [false, false]
@@ -32,7 +33,7 @@ const getActiveConnections = () =>
 
 const startGame = () => {
   gameStarted = true
-  duration = 10
+  duration = 30
   points = [0, 0]
   ready = [false, false]
 
@@ -100,9 +101,12 @@ server.on("connection", (ws) => {
         if (ready[0] && ready[1]) {
           let count = 3
 
-          const countdownInterval = setInterval(() => {
-            connections.forEach((c) =>
-              c.send(JSON.stringify({ type: "countdown", number: count }))
+          countdownInterval = setInterval(() => {
+            connections.forEach((c) => {
+              if (c && c.readyState === WebSocket.OPEN) {
+                c.send(JSON.stringify({ type: "countdown", number: count }))
+              }
+            }
             )
             count--
 
@@ -125,7 +129,9 @@ server.on("connection", (ws) => {
           duration = 10
 
           connections.forEach(c => {
-            c.send(JSON.stringify({ type: "waiting_ready" }))
+            if (c && c.readyState === WebSocket.OPEN) {
+              c.send(JSON.stringify({ type: "waiting_ready" }))
+            }
           })
         }
         break
@@ -151,13 +157,17 @@ server.on("connection", (ws) => {
     playAgain[indexToUse] = false
     gameStarted = false
 
-     if (interval) {
-    clearInterval(interval)
-    interval = null
-  }
-  gameStarted = false
-  points = [0, 0]
-  duration = 10
+    if (interval) {
+      clearInterval(interval)
+      interval = null
+    }
+    if (countdownInterval) {
+      clearInterval(countdownInterval)
+      countdownInterval = null
+    }
+    gameStarted = false
+    points = [0, 0]
+    duration = 10
 
     connections.forEach((c, i) => {
       if (c && c.readyState === WebSocket.OPEN && i !== indexToUse) {

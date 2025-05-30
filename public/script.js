@@ -3,7 +3,6 @@ let clickCount = 0
 let ws = null
 
 const gameStatus = document.getElementById("Status")
-const timer = document.getElementById("timer")
 const clicks = document.getElementById("clicks")
 const clickBtn = document.getElementById("clickBtn")
 const player = document.getElementById("player")
@@ -12,9 +11,50 @@ const playAgainBtn = document.getElementById("playAgainBtn")
 const reconnectBtn = document.getElementById("reconnectBtn")
 const badBtn = document.getElementById("badBtn")
 const doubleBtn = document.getElementById("doubleBtn")
-const gameZone = document.querySelector(".game-zone");
+const gameZone = document.querySelector(".game-zone")
 
-const sizes = ["40px", "60px", "80px", "100px"];
+const sizes = ["40px", "60px", "80px", "100px"]
+let totalGameTime = 30
+let lastDuration = 30
+
+let overdriveAudio = new Audio("sounds/Overdrive.wav")
+overdriveAudio.loop = true
+overdriveAudio.volume = 0.2
+
+function updateTimerBar(duration) {
+  lastDuration = duration;
+  const percent = (duration / totalGameTime) * 100;
+  document.getElementById("progressBar").style.width = `${percent}%`;
+}
+
+function playSound(audioFilePath) {
+  const audio = new Audio(audioFilePath)
+  audio.volume = 1
+  audio.currentTime = 0
+  audio.play().catch(e => {
+    console.warn('Erro ao tocar som:', e)
+  })
+}
+
+function fadeOutAudio(audio, duration = 1000) {
+  const step = 50
+  const fadeStep = audio.volume / (duration / step)
+  const interval = setInterval(() => {
+    if (audio.volume > fadeStep) {
+      audio.volume -= fadeStep
+    } else {
+      audio.volume = 0
+      audio.pause()
+      audio.currentTime = 0
+      clearInterval(interval)
+    }
+  }, step)
+}
+
+function triggerEffect(element, effectClass) {
+  element.classList.add(effectClass)
+  setTimeout(() => element.classList.remove(effectClass), 500)
+}
 
 function getRandomPosition(button) {
   const zoneRect = gameZone.getBoundingClientRect()
@@ -51,8 +91,8 @@ function resetButtonsAfterClick() {
   moveAndResizeButton(clickBtn)
 
   hideExtraButtons()
-  
-  if (Math.random() < 0.4) { 
+
+  if (Math.random() < 0.4) {
     badBtn.classList.remove("hidden")
     moveAndResizeButton(badBtn)
   }
@@ -64,6 +104,7 @@ function resetButtonsAfterClick() {
 }
 
 clickBtn.addEventListener("click", () => {
+  playSound("sounds/click.wav")
   ws?.send(JSON.stringify({ type: "click" }))
   clickCount++
   clicks.textContent = "Cliques: " + clickCount
@@ -72,6 +113,8 @@ clickBtn.addEventListener("click", () => {
 })
 
 badBtn.addEventListener("click", () => {
+  playSound("sounds/bad.wav")
+  triggerEffect(badBtn, "effect-hit")
   ws?.send(JSON.stringify({ type: "badClick" }))
   clickCount--
   clicks.textContent = "Cliques: " + clickCount
@@ -80,21 +123,25 @@ badBtn.addEventListener("click", () => {
 })
 
 doubleBtn.addEventListener("click", () => {
+  playSound("sounds/double.wav")
+  triggerEffect(doubleBtn, "effect-bonus")
   ws?.send(JSON.stringify({ type: "doubleClick" }))
-  clickCount+=2
+  clickCount += 2
   clicks.textContent = "Cliques: " + clickCount
 
   resetButtonsAfterClick()
 })
 
 readyBtn.addEventListener("click", () => {
+  playSound("sounds/select.wav")
   ws?.send(JSON.stringify({ type: "ready" }))
-  readyBtn.disabled = true
+  readyBtn.classList.add("confirmed");
 })
 
 playAgainBtn.addEventListener("click", () => {
+  playSound("sounds/select.wav")
   ws?.send(JSON.stringify({ type: "play_again" }))
-  playAgainBtn.disabled = true
+  playAgainBtn.classList.add("confirmed");
 })
 
 reconnectBtn.addEventListener("click", () => {
@@ -122,6 +169,10 @@ const connectWebSocket = () => {
         break
 
       case "start":
+        overdriveAudio.currentTime = 0
+        overdriveAudio.volume = 0.2
+        overdriveAudio.play()
+        totalGameTime = 30
         clickCount = 0
         clickBtn.disabled = false
         clicks.textContent = "Cliques: 0"
@@ -129,34 +180,37 @@ const connectWebSocket = () => {
         break
 
       case "waiting_ready":
-        gameStatus.textContent = "Ambos conectados. Aguarde até que todos estejam prontos."
-        readyBtn.disabled = false
+        gameStatus.textContent = "Jogadores conectados. Aguarde até que todos estejam prontos."
+        readyBtn.classList.remove("confirmed");
+        playAgainBtn.classList.remove("confirmed");
         playAgainBtn.classList.add("hidden")
         readyBtn.classList.remove("hidden")
         clickCount = 0
-        clicks.textContent = ""
+        clicks.textContent = ".............."
         timer.textContent = ""
         break
 
       case "timer":
-        timer.textContent = "Tempo restante: " + data.duration + "s"
+        updateTimerBar(data.duration)
         break
 
       case "end":
+        fadeOutAudio(overdriveAudio, 1500)
         clickBtn.disabled = true
-        playAgainBtn.disabled = false
         playAgainBtn.classList.remove("hidden")
         clickBtn.classList.add("hidden")
         badBtn.classList.add("hidden")
         doubleBtn.classList.add("hidden")
-        timer.textContent = ""
         clicks.textContent = "Você clicou " + data.points[playerIndex - 1] + " vezes."
 
         if (playerIndex == data.result && data.result !== "empate") {
+          playSound("sounds/win.wav")
           gameStatus.textContent = "Você venceu!"
         } else if (playerIndex != data.result && data.result !== "empate") {
+          playSound("sounds/lose.wav")
           gameStatus.textContent = "Você perdeu!"
         } else if (data.result === "empate") {
+          playSound("sounds/draw.wav")
           gameStatus.textContent = "O jogo empatou!"
         }
         break
@@ -166,6 +220,7 @@ const connectWebSocket = () => {
         break
 
       case "countdown":
+          playSound("sounds/countdown.wav");
         gameStatus.textContent = "Preparar... " + data.number
         readyBtn.classList.add("hidden")
         clickBtn.classList.remove("hidden")
