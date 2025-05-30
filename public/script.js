@@ -151,7 +151,9 @@ reconnectBtn.addEventListener("click", () => {
 })
 
 const connectWebSocket = () => {
-  ws = new WebSocket("ws://localhost:8080")
+  const protocol = location.protocol === "https:" ? "wss" : "ws"
+  const host = location.host
+  ws = new WebSocket(`${protocol}://${host}`)
 
   ws.onopen = () => {
     gameStatus.textContent = "Conectado. Aguardando oponente..."
@@ -220,7 +222,7 @@ const connectWebSocket = () => {
         break
 
       case "countdown":
-          playSound("sounds/countdown.wav");
+        playSound("sounds/countdown.wav");
         gameStatus.textContent = "Preparar... " + data.number
         readyBtn.classList.add("hidden")
         clickBtn.classList.remove("hidden")

@@ -3,8 +3,7 @@ const http = require("http")
 const fs = require("fs")
 const path = require("path")
 
-const server = new WebSocket.Server({ port: 8080 })
-
+const PORT = process.env.PORT || 3000
 const httpServer = http.createServer((req, res) => {
   let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url)
   fs.readFile(filePath, (err, data) => {
@@ -16,6 +15,12 @@ const httpServer = http.createServer((req, res) => {
       res.end(data)
     }
   })
+})
+
+const server = new WebSocket.Server({ server: httpServer })
+
+httpServer.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`)
 })
 
 let connections = []
@@ -183,8 +188,3 @@ server.on("connection", (ws) => {
     )
   }
 })
-
-httpServer.listen(3000, () => {
-  console.log("Servidor HTTP rodando em http://localhost:3000")
-})
-
