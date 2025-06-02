@@ -1,6 +1,7 @@
 let playerIndex = null
 let clickCount = 0
 let ws = null
+const audioCache = {}
 
 const gameStatus = document.getElementById("Status")
 const clicks = document.getElementById("clicks")
@@ -24,19 +25,25 @@ overdriveAudio.loop = true
 overdriveAudio.volume = 0.2
 
 function updateTimerBar(duration) {
-  lastDuration = duration;
-  const percent = (duration / totalGameTime) * 100;
-  document.getElementById("progressBar").style.width = `${percent}%`;
+  lastDuration = duration
+  const percent = (duration / totalGameTime) * 100
+  document.getElementById("progressBar").style.width = `${percent}%`
 }
 
 function playSound(audioFilePath) {
-  const audio = new Audio(audioFilePath)
+  if (!audioCache[audioFilePath]) {
+    const audio = new Audio(audioFilePath)
+    audio.preload = 'auto'
+    audioCache[audioFilePath] = audio
+  }
+  const audio = audioCache[audioFilePath].cloneNode()
   audio.volume = 1
   audio.currentTime = 0
   audio.play().catch(e => {
     console.warn('Erro ao tocar som:', e)
-  })
+  });
 }
+
 
 function fadeOutAudio(audio, duration = 1000) {
   const step = 50
@@ -137,13 +144,13 @@ doubleBtn.addEventListener("click", () => {
 readyBtn.addEventListener("click", () => {
   playSound("sounds/select.wav")
   ws?.send(JSON.stringify({ type: "ready" }))
-  readyBtn.classList.add("confirmed");
+  readyBtn.classList.add("confirmed")
 })
 
 playAgainBtn.addEventListener("click", () => {
   playSound("sounds/select.wav")
   ws?.send(JSON.stringify({ type: "play_again" }))
-  playAgainBtn.classList.add("confirmed");
+  playAgainBtn.classList.add("confirmed")
 })
 
 reconnectBtn.addEventListener("click", () => {
@@ -174,6 +181,7 @@ const connectWebSocket = () => {
         break
 
       case "start":
+        playSound("sounds/start.wav")
         overdriveAudio.currentTime = 0
         overdriveAudio.volume = 0.2
         overdriveAudio.play()
@@ -187,8 +195,8 @@ const connectWebSocket = () => {
 
       case "waiting_ready":
         gameStatus.textContent = "Jogadores conectados. Aguarde até que todos estejam prontos."
-        readyBtn.classList.remove("confirmed");
-        playAgainBtn.classList.remove("confirmed");
+        readyBtn.classList.remove("confirmed")
+        playAgainBtn.classList.remove("confirmed")
         playAgainBtn.classList.add("hidden")
         readyBtn.classList.remove("hidden")
         clickCount = 0
@@ -235,7 +243,9 @@ const connectWebSocket = () => {
         break
 
       case "countdown":
-        playSound("sounds/countdown.wav");
+        if (data.number > 0) {
+        playSound("sounds/countdown.wav")
+        }
         gameStatus.textContent = "Preparar... " + data.number
         readyBtn.classList.add("hidden")
         clickBtn.classList.remove("hidden")

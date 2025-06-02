@@ -4,7 +4,7 @@ const fs = require("fs")
 const path = require("path")
 
 const PORT = process.env.PORT || 3000
-const INACTIVITY_TIMEOUT = 30000
+const INACTIVITY_TIMEOUT = 60000
 
 const httpServer = http.createServer((req, res) => {
   let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url)
