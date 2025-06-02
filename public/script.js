@@ -13,6 +13,7 @@ const badBtn = document.getElementById("badBtn")
 const doubleBtn = document.getElementById("doubleBtn")
 const gameZone = document.querySelector(".game-zone")
 const opponentPoints = document.getElementById("opponent-points")
+const roomId = document.getElementById("roomId")
 
 const sizes = ["40px", "60px", "80px", "100px"]
 let totalGameTime = 30
@@ -169,6 +170,7 @@ const connectWebSocket = () => {
         player.textContent = "Conectado como jogador " + playerIndex + "."
         gameStatus.textContent = "Aguardando oponente..."
         reconnectBtn.classList.add("hidden")
+      roomId.textContent = data.room
         break
 
       case "start":
@@ -260,13 +262,18 @@ const connectWebSocket = () => {
     }
   }
 
-  ws.onclose = () => {
+  ws.onclose = (e) => {
     reconnectBtn.classList.remove("hidden")
     clickBtn.classList.add("hidden")
     badBtn.classList.add("hidden")
     doubleBtn.classList.add("hidden")
     readyBtn.classList.add("hidden")
     playAgainBtn.classList.add("hidden")
+    roomId.textContent = ""
+    ws = null
+    if (e.code === 4000) {
+    gameStatus.textContent = "Desconectado por inatividade"
+  }
   }
 }
 

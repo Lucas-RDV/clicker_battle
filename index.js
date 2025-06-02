@@ -4,6 +4,8 @@ const fs = require("fs")
 const path = require("path")
 
 const PORT = process.env.PORT || 3000
+const INACTIVITY_TIMEOUT = 30000
+
 const httpServer = http.createServer((req, res) => {
   let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url)
   fs.readFile(filePath, (err, data) => {
@@ -18,173 +20,154 @@ const httpServer = http.createServer((req, res) => {
 })
 
 const server = new WebSocket.Server({ server: httpServer })
-
 httpServer.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`)
 })
 
-let connections = []
-let points = [0, 0]
-let duration = 30
-let interval = null
-let countdownInterval = null
-let ready = [false, false]
-let gameStarted = false
-let playAgain = [false, false]
+let rooms = []
+let nextRoomId = 1
 
-const getActiveConnections = () =>
-  connections.filter((c) => c && c.readyState === WebSocket.OPEN)
+function findOrCreateRoom(ws) {
+  let room = rooms.find(r => r.players.length === 1)
 
-
-const startGame = () => {
-  gameStarted = true
-  duration = 30
-  points = [0, 0]
-  ready = [false, false]
-
-  connections.forEach((c) => c.send(JSON.stringify({ type: "start" })))
-
-  interval = setInterval(() => {
-    duration--
-    connections.forEach((c) => {
-      if (c && c.readyState === WebSocket.OPEN) {
-        c.send(JSON.stringify({ type: "timer", duration, points }))
-      }
+  if (!room) {
+    room = {
+      id: nextRoomId++,
+      players: [],
+      points: [0, 0],
+      ready: [false, false],
+      playAgain: [false, false],
+      gameStarted: false,
+      duration: 30,
+      interval: null,
+      countdownInterval: null,
     }
-    );
+    rooms.push(room)
+  }
 
-    if (duration <= 0) {
-      clearInterval(interval)
-      let result =
-        points[0] === points[1]
-          ? "empate"
-          : points[0] > points[1]
-            ? "1"
-            : "2"
+  const playerIndex = room.players.length
+  room.players.push(ws)
+  ws.room = room
+  ws.playerIndex = playerIndex
 
-      connections.forEach((c, i) => {
-        if (c && c.readyState === WebSocket.OPEN) {
-          c.send(
-            JSON.stringify({
-              type: "end",
-              points,
-              result,
-            })
-          )
+  ws.send(JSON.stringify({ type: "connection_success", player: playerIndex, room: room.id  }))
+
+  if (room.players.length === 2) {
+    room.players.forEach(p => p.send(JSON.stringify({ type: "waiting_ready" })))
+  }
+}
+
+function startGame(room) {
+  room.gameStarted = true
+  room.duration = 30
+  room.points = [0, 0]
+  room.ready = [false, false]
+
+  room.players.forEach(p => p.send(JSON.stringify({ type: "start" })))
+
+  room.interval = setInterval(() => {
+    room.duration--
+    room.players.forEach(p => {
+      if (p.readyState === WebSocket.OPEN) {
+        p.send(JSON.stringify({ type: "timer", duration: room.duration, points: room.points }))
+      }
+    })
+
+    if (room.duration <= 0) {
+      clearInterval(room.interval)
+      const result = room.points[0] === room.points[1] ? "empate" : room.points[0] > room.points[1] ? "1" : "2"
+      room.players.forEach((p, i) => {
+        if (p.readyState === WebSocket.OPEN) {
+          p.send(JSON.stringify({ type: "end", points: room.points, result }))
         }
       })
-
-      points = [0, 0]
-      gameStarted = false
-      ready = [false, false]
+      room.ready = [false, false]
+      room.gameStarted = false
     }
   }, 1000)
 }
 
 server.on("connection", (ws) => {
-  if (getActiveConnections().length >= 2) {
-    ws.send(
-      JSON.stringify({ type: "error", message: "Sala cheia" })
-    )
-    ws.close()
-    return
+  findOrCreateRoom(ws)
+
+  let inactivityTimer = setTimeout(() => ws.close(4000, "Inatividade"), INACTIVITY_TIMEOUT)
+
+  const resetInactivityTimer = () => {
+    clearTimeout(inactivityTimer)
+    inactivityTimer = setTimeout(() => ws.close(4000, "Inatividade"), INACTIVITY_TIMEOUT)
   }
 
-  let indexToUse = connections.findIndex((c) => !c || c.readyState !== WebSocket.OPEN)
-  indexToUse = indexToUse !== -1 ? indexToUse : connections.length
-  connections[indexToUse] = ws
-
-  ws.send(JSON.stringify({ type: "connection_success", player: indexToUse }))
-
   ws.on("message", (msg) => {
+    resetInactivityTimer()
     const data = JSON.parse(msg)
+    const room = ws.room
+    const index = ws.playerIndex
+
     switch (data.type) {
       case "ready":
-        ready[indexToUse] = true
-        connections[indexToUse].send(JSON.stringify({ type: "ready_ack" }))
+        room.ready[index] = true
+        ws.send(JSON.stringify({ type: "ready_ack" }))
 
-        if (ready[0] && ready[1]) {
+        if (room.ready[0] && room.ready[1]) {
           let count = 3
-
-          countdownInterval = setInterval(() => {
-            connections.forEach((c) => {
-              if (c && c.readyState === WebSocket.OPEN) {
-                c.send(JSON.stringify({ type: "countdown", number: count }))
+          room.countdownInterval = setInterval(() => {
+            room.players.forEach(p => {
+              if (p.readyState === WebSocket.OPEN) {
+                p.send(JSON.stringify({ type: "countdown", number: count }))
               }
-            }
-            )
+            })
             count--
-
             if (count < 0) {
-              clearInterval(countdownInterval)
-              startGame()
+              clearInterval(room.countdownInterval)
+              startGame(room)
             }
           }, 1000)
         }
         break
 
       case "play_again":
-        playAgain[indexToUse] = true
-
-        if (playAgain[0] && playAgain[1]) {
-          ready = [false, false]
-          playAgain = [false, false]
-          gameStarted = false
-          points = [0, 0]
-          duration = 10
-
-          connections.forEach(c => {
-            if (c && c.readyState === WebSocket.OPEN) {
-              c.send(JSON.stringify({ type: "waiting_ready" }))
-            }
-          })
+        room.playAgain[index] = true
+        if (room.playAgain[0] && room.playAgain[1]) {
+          room.ready = [false, false]
+          room.playAgain = [false, false]
+          room.points = [0, 0]
+          room.duration = 30
+          room.gameStarted = false
+          room.players.forEach(p => p.send(JSON.stringify({ type: "waiting_ready" })))
         }
         break
 
       case "click":
-        points[indexToUse]++
+        room.points[index]++
         break
-
       case "doubleClick":
-        points[indexToUse] += 2
+        room.points[index] += 2
         break
-
       case "badClick":
-        points[indexToUse]--
+        room.points[index]--
         break
     }
   })
 
   ws.on("close", () => {
-    console.log(`Jogador ${indexToUse + 1} desconectado.`)
-    connections[indexToUse] = null
-    ready = [false, false]
-    playAgain[indexToUse] = false
-    gameStarted = false
+    clearTimeout(inactivityTimer)
+    const room = ws.room
+    if (!room) return
 
-    if (interval) {
-      clearInterval(interval)
-      interval = null
-    }
-    if (countdownInterval) {
-      clearInterval(countdownInterval)
-      countdownInterval = null
-    }
-    gameStarted = false
-    points = [0, 0]
-    duration = 10
+    if (room.interval) clearInterval(room.interval)
+    if (room.countdownInterval) clearInterval(room.countdownInterval)
 
-    connections.forEach((c, i) => {
-      if (c && c.readyState === WebSocket.OPEN && i !== indexToUse) {
-        c.send(JSON.stringify({ type: "opponent_disconnected" }))
+    room.players.forEach((p, i) => {
+      if (p !== ws && p.readyState === WebSocket.OPEN) {
+        p.send(JSON.stringify({ type: "opponent_disconnected" }))
       }
     })
+
+    rooms = rooms.filter(r => r !== room)
+    room.players = room.players.filter(p => p !== ws)
+
+    if (room.players.length === 0) {
+      rooms = rooms.filter(r => r !== room)
+    }
   })
-
-
-  if (connections.length === 2 && !gameStarted) {
-    connections.forEach((c) =>
-      c.send(JSON.stringify({ type: "waiting_ready" }))
-    )
-  }
 })
